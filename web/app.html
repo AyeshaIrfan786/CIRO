@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIRO — Crisis Intelligence & Response Orchestrator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #08080F;
+    --bg2: #0F0F1A;
+    --bg3: #141420;
+    --border: #1E1E30;
+    --border2: #252538;
+    --text: #E8E8F0;
+    --text2: #888899;
+    --text3: #444455;
+    --blue: #3B82F6;
+    --green: #22C55E;
+    --red: #EF4444;
+    --amber: #F59E0B;
+    --purple: #8B5CF6;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 480px; margin: 0 auto; padding: 0 20px 60px; position: relative; z-index: 1; }
+
+  /* SCREENS */
+  .screen { display: none; animation: fadeUp 0.4s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* HEADER */
+  .header { padding: 32px 0 24px; }
+  .logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.3)} }
+  .logo-text { font-family: var(--sans); font-size: 28px; font-weight: 800; letter-spacing: 8px; color: var(--text); }
+  .live-tag { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; padding: 2px 8px; font-family: var(--mono); font-size: 9px; color: var(--red); letter-spacing: 2px; }
+  .header-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 1px; }
+
+  /* SECTION LABEL */
+  .section-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 3px; margin-bottom: 10px; margin-top: 24px; }
+
+  /* SCENARIO CARDS */
+  .scenario-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .scenario-card:hover { border-color: var(--border2); background: var(--bg3); }
+  .scenario-card.selected { border-color: var(--blue); background: rgba(59,130,246,0.06); }
+  .scenario-icon { font-size: 24px; flex-shrink: 0; }
+  .scenario-info { flex: 1; }
+  .scenario-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .scenario-name { font-size: 14px; font-weight: 600; color: var(--text2); }
+  .scenario-card.selected .scenario-name { color: var(--text); }
+  .scenario-desc { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+  .tag-pill { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; border: 1px solid; }
+  .selected-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex-shrink: 0; }
+
+  /* INPUT */
+  .input-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .input-wrap textarea {
+    width: 100%; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: var(--mono); font-size: 12px; line-height: 1.8;
+    resize: none; min-height: 80px;
+  }
+  .input-footer { display: flex; justify-content: space-between; margin-top: 8px; }
+  .input-hint { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+  /* SIGNALS ROW */
+  .signals-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .signal-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 12px;
+  }
+  .signal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  .signal-text { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; }
+
+  /* BUTTONS */
+  .btn-primary {
+    width: 100%; background: var(--blue); border: none; border-radius: 12px;
+    color: white; font-family: var(--sans); font-size: 13px; font-weight: 800;
+    letter-spacing: 3px; padding: 18px; cursor: pointer; margin-top: 28px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    transition: all 0.2s;
+  }
+  .btn-primary:hover { background: #2563EB; transform: translateY(-1px); }
+  .btn-primary.green { background: var(--green); color: #000; }
+  .btn-primary.green:hover { background: #16A34A; }
+  .btn-secondary {
+    width: 100%; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text2); font-family: var(--sans);
+    font-size: 12px; font-weight: 700; letter-spacing: 2px; padding: 16px;
+    cursor: pointer; margin-top: 12px; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--border2); color: var(--text); }
+
+  /* TOP BAR */
+  .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 24px 0 20px; }
+  .back-btn { font-family: var(--mono); font-size: 11px; color: var(--text3); cursor: pointer; letter-spacing: 2px; background: none; border: none; }
+  .back-btn:hover { color: var(--text2); }
+  .step-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 2px; }
+
+  /* LOADING */
+  .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+  .spinner { width: 40px; height: 40px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-title { font-family: var(--mono); font-size: 13px; color: var(--text); letter-spacing: 3px; }
+  .loading-phase { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 2px; }
+  .progress-wrap { width: 200px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--green); border-radius: 1px; transition: width 0.5s ease; width: 0%; }
+  .logs-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; width: 100%; margin-top: 8px; max-height: 150px; overflow-y: auto; }
+  .log-line { font-family: var(--mono); font-size: 10px; color: var(--text3); line-height: 1.8; }
+  .log-time { color: var(--text3); }
+  .log-ok { color: var(--green); }
+  .log-warn { color: var(--amber); }
+
+  /* CARDS */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+
+  /* HEADLINE CARD */
+  .headline-card { border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .headline-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .severity-badge { display: flex; align-items: center; gap: 6px; border: 1px solid; border-radius: 6px; padding: 3px 10px; }
+  .severity-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .severity-text { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+  .crisis-type { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: 2px; }
+  .location-text { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 14px; }
+
+  /* CONFIDENCE BAR */
+  .conf-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .conf-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; width: 80px; }
+  .conf-bar-wrap { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .conf-bar { height: 3px; border-radius: 2px; transition: width 1s ease; width: 0%; }
+  .conf-pct { font-family: var(--mono); font-size: 10px; color: var(--text2); width: 32px; text-align: right; }
+
+  /* WARNING ROW */
+  .warning-row { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .warning-text { font-family: var(--mono); font-size: 10px; color: var(--amber); line-height: 1.6; }
+
+  /* FUSION CARD */
+  .fusion-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .fusion-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 1px; }
+  .fusion-score { font-size: 36px; font-weight: 800; line-height: 1; }
+  .fusion-max { font-size: 14px; color: var(--text3); }
+  .divider { height: 1px; background: var(--border); margin-bottom: 12px; }
+  .component-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .component-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; width: 64px; }
+  .component-bar-wrap { flex: 1; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .component-bar { height: 2px; background: var(--blue); border-radius: 1px; transition: width 1s ease; width: 0%; }
+  .component-score { font-family: var(--mono); font-size: 10px; color: var(--text3); width: 24px; text-align: right; }
+  .level-pill { font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; }
+
+  /* IMPACT GRID */
+  .impact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .impact-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .impact-num { font-size: 18px; font-weight: 800; margin-bottom: 4px; color: var(--text); }
+  .impact-card-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; }
+
+  /* REASONING */
+  .reasoning-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 20px; }
+  .reasoning-text { font-family: var(--mono); font-size: 11px; color: var(--text2); line-height: 1.8; }
+
+  /* ACTION CARDS */
+  .action-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; margin-bottom: 8px; display: flex; align-items: center;
+    justify-content: space-between; opacity: 0; transform: translateY(12px);
+    transition: all 0.4s ease;
+  }
+  .action-card.visible { opacity: 1; transform: translateY(0); }
+  .action-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; }
+  .action-icon-box { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .action-text { font-size: 13px; color: var(--text2); margin-bottom: 6px; line-height: 1.4; }
+  .action-meta { display: flex; align-items: center; gap: 8px; }
+  .unit-pill { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; border: 1px solid; }
+  .action-time { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+  .done-tag { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 4px; padding: 3px 8px; }
+  .done-text { font-family: var(--mono); font-size: 9px; color: var(--green); font-weight: 700; letter-spacing: 1px; }
+
+  /* TICKET CARD */
+  .ticket-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .ticket-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .ticket-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; }
+  .ticket-val { font-family: var(--mono); font-size: 10px; color: var(--text2); }
+
+  /* REROUTE */
+  .reroute-card { background: var(--bg2); border: 1px solid rgba(59,130,246,0.2); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .reroute-title { font-family: var(--mono); font-size: 9px; color: var(--blue); letter-spacing: 2px; margin-bottom: 10px; }
+  .reroute-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .reroute-before { font-size: 28px; font-weight: 800; color: var(--red); }
+  .reroute-arrow { font-size: 20px; color: var(--text3); }
+  .reroute-after { font-size: 28px; font-weight: 800; color: var(--green); }
+  .reroute-route { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+  /* ALERT CARD */
+  .alert-card { background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .alert-title { font-family: var(--mono); font-size: 9px; color: var(--amber); letter-spacing: 2px; margin-bottom: 8px; }
+  .alert-msg { font-family: var(--mono); font-size: 11px; color: rgba(245,158,11,0.8); line-height: 1.7; margin-bottom: 10px; }
+  .alert-channels { display: flex; gap: 6px; }
+  .channel-pill { background: rgba(245,158,11,0.15); border-radius: 4px; padding: 3px 8px; font-family: var(--mono); font-size: 9px; color: var(--amber); font-weight: 700; }
+
+  /* RETRACTION */
+  .retraction-card { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .retraction-title { font-family: var(--mono); font-size: 9px; color: var(--amber); letter-spacing: 1px; margin-bottom: 4px; }
+  .retraction-text { font-family: var(--mono); font-size: 11px; color: rgba(245,158,11,0.7); line-height: 1.6; }
+
+  /* OUTCOME */
+  .success-header { margin-bottom: 28px; }
+  .success-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 6px; padding: 4px 12px; margin-bottom: 12px; }
+  .success-badge-text { font-family: var(--mono); font-size: 9px; color: var(--green); font-weight: 700; letter-spacing: 2px; }
+  .success-title { font-size: 42px; font-weight: 900; letter-spacing: 4px; line-height: 1.1; margin-bottom: 8px; }
+  .success-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+  /* BEFORE AFTER */
+  .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 1px; flex: 1; }
+  .metric-vals { display: flex; align-items: center; gap: 8px; }
+  .metric-before { font-family: var(--mono); font-size: 11px; color: var(--red); font-weight: 700; }
+  .metric-arrow { font-size: 12px; color: var(--text3); }
+  .metric-after { font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: 700; }
+
+  /* COMPARISON */
+  .comp-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .comp-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .comp-label-wrap { display: flex; align-items: center; gap: 8px; }
+  .comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .comp-label-text { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 1px; }
+  .comp-val { font-family: var(--mono); font-size: 10px; color: var(--text2); text-align: right; max-width: 200px; }
+  .improvement-badge { background: rgba(34,197,94,0.1); border-radius: 8px; padding: 12px; margin-top: 12px; text-align: center; }
+  .improvement-text { font-family: var(--mono); font-size: 13px; color: var(--green); font-weight: 700; letter-spacing: 2px; }
+
+  /* TRACE */
+  .trace-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 20px; max-height: 300px; overflow-y: auto; }
+  .trace-item { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(30,30,48,0.8); }
+  .trace-item:last-child { border-bottom: none; }
+  .trace-step-pill { font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; border: 1px solid; white-space: nowrap; align-self: flex-start; min-width: 70px; text-align: center; }
+  .trace-right { flex: 1; }
+  .trace-agent { font-family: var(--mono); font-size: 8px; color: var(--text3); letter-spacing: 1px; margin-bottom: 2px; }
+  .trace-data { font-family: var(--mono); font-size: 10px; color: var(--text2); line-height: 1.5; }
+
+  .scale-card { background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .scale-title { font-family: var(--mono); font-size: 9px; color: var(--blue); letter-spacing: 2px; margin-bottom: 6px; }
+  .scale-text { font-family: var(--mono); font-size: 11px; color: var(--text3); line-height: 1.7; }
+
+  .footer-text { font-family: var(--mono); font-size: 10px; color: var(--text3); text-align: center; margin-top: 20px; letter-spacing: 1px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ═══ SCREEN 1: INPUT ═══ -->
+  <div class="screen active" id="screen-input">
+    <div class="header">
+      <div class="logo-row">
+        <div class="logo-dot"></div>
+        <div class="logo-text">CIRO</div>
+        <div class="live-tag">LIVE</div>
+      </div>
+      <div class="header-sub">CRISIS INTELLIGENCE & RESPONSE ORCHESTRATOR</div>
+    </div>
+
+    <div class="section-label">SELECT SCENARIO</div>
+    <div id="scenarios-container"></div>
+
+    <div class="section-label">FIELD REPORT / SOCIAL SIGNAL</div>
+    <div class="input-wrap">
+      <textarea id="user-text" rows="3" placeholder="Paste social media post or field report..."></textarea>
+      <div class="input-footer">
+        <span class="input-hint">Urdu / Roman Urdu / English supported</span>
+      </div>
+    </div>
+
+    <div class="section-label">ACTIVE SIGNAL SOURCES</div>
+    <div class="signals-row">
+      <div class="signal-pill"><div class="signal-dot"></div><span class="signal-text">SATELLITE</span></div>
+      <div class="signal-pill"><div class="signal-dot"></div><span class="signal-text">WEATHER</span></div>
+      <div class="signal-pill"><div class="signal-dot"></div><span class="signal-text">TRAFFIC</span></div>
+      <div class="signal-pill"><div class="signal-dot"></div><span class="signal-text">SOCIAL</span></div>
+    </div>
+
+    <button class="btn-primary" onclick="startAnalysis()">
+      <span>ANALYZE CRISIS</span><span>→</span>
+    </button>
+    <div class="footer-text">4 AGENTS · GEMINI AI · SIMULATED EXECUTION</div>
+  </div>
+
+  <!-- ═══ SCREEN 2: DETECTION ═══ -->
+  <div class="screen" id="screen-detection">
+    <div class="top-bar">
+      <button class="back-btn" onclick="showScreen('input')">← BACK</button>
+      <span class="step-label">STEP 1–2 OF 4</span>
+    </div>
+    <div id="detection-content"></div>
+  </div>
+
+  <!-- ═══ SCREEN 3: SIMULATION ═══ -->
+  <div class="screen" id="screen-simulation">
+    <div class="top-bar">
+      <button class="back-btn" onclick="showScreen('detection')">← BACK</button>
+      <span class="step-label">STEP 3–4 OF 4</span>
+    </div>
+    <div id="simulation-content"></div>
+  </div>
+
+  <!-- ═══ SCREEN 4: OUTCOME ═══ -->
+  <div class="screen" id="screen-outcome">
+    <div class="top-bar">
+      <button class="back-btn" onclick="showScreen('simulation')">← BACK</button>
+      <span class="step-label">IMPACT REPORT</span>
+    </div>
+    <div id="outcome-content"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const SCENARIOS = [
+  {
+    id: 0, name: 'G-10 Flash Flood', tag: 'FLOOD', tagColor: '#3B82F6',
+    desc: 'Urban flooding + water main conflict + secondary heat crisis',
+    icon: '🌊', locationKey: 'g10', scenario: 'flooding',
+    defaultText: 'G-10 mein pani bhar gaya hai, gaariyan phans gayi hain! Koi help karo yaar',
+    secondaryCrisis: { type: 'heatwave', location: 'I-9 Industrial Area', severity: 6 },
+  },
+  {
+    id: 1, name: 'Faizabad Accident', tag: 'ACCIDENT', tagColor: '#F59E0B',
+    desc: 'Major pile-up in dense fog — 3 vehicles',
+    icon: '🚗', locationKey: 'faizabad', scenario: 'accident',
+    defaultText: 'Bara accident hua hai Faizabad interchange pe, 3 gaariyan takra gayi',
+    secondaryCrisis: null,
+  },
+  {
+    id: 2, name: 'API Failure Test', tag: 'STRESS', tagColor: '#EF4444',
+    desc: 'Missing weather data — robustness test',
+    icon: '⚠️', locationKey: 'default', scenario: 'flooding',
+    defaultText: 'Flooding near Blue Area, office buildings evacuating',
+    secondaryCrisis: null,
+  },
+];
+
+const MOCK_DATA = {
+  g10: {
+    satellite: { ndwi: 0.55, delta: 0.35, score: 71, soilMoisture: 0.91 },
+    weather: { rainfall_mm: 67.2, condition: 'Thunderstorm', humidity: 94, rainfallScore: 78, rainfallLabel: 'High' },
+    social: { reports: 4, score: 54, conflicting: true, types: ['flood','stuck','road'] },
+    traffic: { level: 'Severe', speedKmh: 4, blocked: ['Kashmir Highway','G-10 Markaz Road'], score: 90 },
+  },
+  faizabad: {
+    satellite: { ndwi: 0.18, delta: 0.08, score: 42, soilMoisture: 0.55 },
+    weather: { rainfall_mm: 28, condition: 'Dense Fog', humidity: 78, rainfallScore: 55, rainfallLabel: 'Moderate' },
+    social: { reports: 3, score: 85, conflicting: false, types: ['accident','road','stuck'] },
+    traffic: { level: 'High', speedKmh: 8, blocked: ['Faizabad Interchange','IJP Road'], score: 65 },
+  },
+  default: {
+    satellite: { ndwi: 0.30, delta: 0.15, score: 55, soilMoisture: 0.60 },
+    weather: { rainfall_mm: null, condition: 'UNAVAILABLE', humidity: null, rainfallScore: 30, rainfallLabel: 'Unknown' },
+    social: { reports: 2, score: 45, conflicting: false, types: ['flood'] },
+    traffic: { level: 'Moderate', speedKmh: 20, blocked: ['Main Road'], score: 40 },
+  },
+};
+
+const RESOURCES = { rescueTeams: 8, medicalUnits: 5, policeUnits: 12, evacuationBuses: 20 };
+
+let selectedScenario = 0;
+let pipelineData = {};
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+function init() {
+  const container = document.getElementById('scenarios-container');
+  SCENARIOS.forEach(sc => {
+    const div = document.createElement('div');
+    div.className = `scenario-card ${sc.id === 0 ? 'selected' : ''}`;
+    div.id = `scenario-${sc.id}`;
+    div.onclick = () => selectScenario(sc.id);
+    div.innerHTML = `
+      <div class="scenario-icon">${sc.icon}</div>
+      <div class="scenario-info">
+        <div class="scenario-title-row">
+          <span class="scenario-name">${sc.name}</span>
+          <span class="tag-pill" style="color:${sc.tagColor};border-color:${sc.tagColor}44;background:${sc.tagColor}11">${sc.tag}</span>
+        </div>
+        <div class="scenario-desc">${sc.desc}</div>
+      </div>
+      ${sc.id === 0 ? '<div class="selected-dot"></div>' : ''}
+    `;
+    container.appendChild(div);
+  });
+  document.getElementById('user-text').value = SCENARIOS[0].defaultText;
+}
+
+function selectScenario(id) {
+  selectedScenario = id;
+  document.querySelectorAll('.scenario-card').forEach(c => { c.classList.remove('selected'); c.querySelector('.selected-dot')?.remove(); });
+  const card = document.getElementById(`scenario-${id}`);
+  card.classList.add('selected');
+  const dot = document.createElement('div'); dot.className = 'selected-dot';
+  card.appendChild(dot);
+  document.getElementById('user-text').value = SCENARIOS[id].defaultText;
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════
+// ANALYSIS ENGINE
+// ═══════════════════════════════════════════════
+function computeFusion(sc, data) {
+  const confidence = data.social.conflicting ? 0.71 : 0.87;
+  const socialScore = Math.round(confidence * 100);
+  const trafficScore = data.traffic.score;
+  const rainfallScore = data.weather.rainfallScore;
+  const severityScore = data.satellite.score;
+
+  const w = { text: 0.25, rainfall: 0.25, satellite: 0.30, soil: 0.20 };
+  const fused = Math.round(socialScore*w.text + trafficScore*w.rainfall + rainfallScore*w.satellite + severityScore*w.soil);
+  const penalty = data.social.conflicting ? 0.82 : 1.0;
+  const final = Math.round(fused * penalty);
+
+  return {
+    fusedScore: final,
+    confidence,
+    components: { social: socialScore, traffic: trafficScore, weather: rainfallScore, satellite: severityScore },
+    conflictPenalty: data.social.conflicting,
+    severityLabel: final >= 70 ? 'HIGH' : final >= 40 ? 'MEDIUM' : 'LOW',
+    primaryDriver: trafficScore >= rainfallScore && trafficScore >= socialScore ? 'traffic' : rainfallScore >= socialScore ? 'weather' : 'social',
+  };
+}
+
+function buildPlan(sc, fusion) {
+  const sev = fusion.fusedScore >= 70 ? 8 : 6;
+  return {
+    responseId: `RESP-${String(Date.now()).slice(-4)}`,
+    actions: [
+      { id:'ACT-001', action:`Reroute traffic via alternate routes away from ${sc.locationKey.toUpperCase()}`, unit:'Traffic Police', unitColor:'#3B82F6', priority:'immediate', time:'5 min', icon:'🚨' },
+      { id:'ACT-002', action:`Dispatch ${sev >= 8 ? 3 : 2} rescue teams to affected zone`, unit:'1122 Rescue', unitColor:'#EF4444', priority:'immediate', time:'8 min', icon:'🚑' },
+      { id:'ACT-003', action:'Send bilingual public alert via SMS and app notifications', unit:'CIRO Alert System', unitColor:'#F59E0B', priority:'immediate', time:'1 min', icon:'📢' },
+      { id:'ACT-004', action:'Notify PIMS Hospital — prepare trauma unit for potential casualties', unit:'Emergency Coordination', unitColor:'#8B5CF6', priority:'high', time:'2 min', icon:'🏥' },
+    ],
+    publicAlert: `CIRO ALERT: ${sc.name} detected. Severity HIGH. Evacuate via designated routes. Call 1122 for rescue. NOT a drill.`,
+    urduAlert: `سیرو انتباہ: ${sc.locationKey.toUpperCase()} میں ہنگامی صورتحال۔ فوری طور پر محفوظ مقام پر جائیں۔ 1122`,
+    estimatedTime: 8,
+    allocated: { rescueTeams: sev >= 8 ? 3 : 2, medicalUnits: 2, policeUnits: 4, evacuationBuses: 6 },
+  };
+}
+
+function simulateImpact(fusion, plan) {
+  const congBefore = Math.min(99, 85 + (fusion.fusedScore >= 70 ? 8 : 6));
+  const congAfter = Math.max(15, congBefore - 62);
+  return {
+    before: { congestion: `${congBefore}%`, responseTime: '18-25 min (manual)', units: 0, alerts: 0, status: 'IDLE' },
+    after:  { congestion: `${congAfter}%`, responseTime: `${plan.estimatedTime} min (CIRO)`, units: plan.allocated.rescueTeams, alerts: 8400, status: 'ACTIVE_RESPONSE' },
+    metrics: { reduction: `${congBefore - congAfter}%`, improvement: '82% faster', lives: '2-4 casualties avoided', cost: '$0.008', scaling: '100x load = $0.80/incident via parallel agents' },
+  };
+}
+
+function buildTrace(sc, data, fusion, plan) {
+  return [
+    { agent:'DetectorAgent', step:'OBSERVE', data:`Signal ingestion: location=${sc.locationKey}, scenario=${sc.scenario}` },
+    { agent:'DetectorAgent', step:'TOOL_CALL', data:`get_satellite_data(${sc.locationKey})` },
+    { agent:'DetectorAgent', step:'TOOL_RESULT', data:`NDWI=${data.satellite.ndwi}, delta=+${data.satellite.delta}, score=${data.satellite.score}` },
+    { agent:'DetectorAgent', step:'TOOL_CALL', data:`get_weather(lat, lon)` },
+    { agent:'DetectorAgent', step:'TOOL_RESULT', data:`rainfall=${data.weather.rainfall_mm ?? 'UNAVAILABLE'}mm, condition=${data.weather.condition}, score=${data.weather.rainfallScore}` },
+    { agent:'DetectorAgent', step:'TOOL_CALL', data:`get_social_signals(${sc.scenario})` },
+    { agent:'DetectorAgent', step:'TOOL_RESULT', data:`reports=${data.social.reports}, score=${data.social.score}, conflicting=${data.social.conflicting}` },
+    { agent:'DetectorAgent', step:'TOOL_CALL', data:`get_traffic_data(${sc.locationKey})` },
+    { agent:'DetectorAgent', step:'TOOL_RESULT', data:`congestion=${data.traffic.level}, score=${data.traffic.score}` },
+    { agent:'DetectorAgent', step:'REASONING', data:'Calling Gemini to classify crisis from fused multi-source signals...' },
+    { agent:'DetectorAgent', step:'DECISION', data:`Crisis: Urban Flooding | Confidence: ${(fusion.confidence*100).toFixed(0)}% | FieldVerif: ${data.social.conflicting}` },
+    { agent:'AnalystAgent', step:'OBSERVE', data:`Analyzing crisis: severity computation, confidence fusion` },
+    { agent:'AnalystAgent', step:'TOOL_CALL', data:'compute_confidence_fusion(classification, signals)' },
+    { agent:'AnalystAgent', step:'TOOL_RESULT', data:`fusedScore=${fusion.fusedScore}/100, severity=${fusion.severityLabel}, driver=${fusion.primaryDriver}` },
+    { agent:'AnalystAgent', step:'TOOL_CALL', data:'predict_impact(classification, fusion)' },
+    { agent:'AnalystAgent', step:'TOOL_RESULT', data:`population=50,000, loss=Rs 9.0B, responseTarget=8 min` },
+    { agent:'AnalystAgent', step:'DECISION', data:`Severity confirmed: ${fusion.severityLabel} | ETA: 8 minutes` },
+    { agent:'PlannerAgent', step:'OBSERVE', data:`Planning response: ${sc.name}` },
+    { agent:'PlannerAgent', step:'TOOL_CALL', data:'check_resource_conflicts(primary, secondary)' },
+    { agent:'PlannerAgent', step:'TOOL_RESULT', data:sc.secondaryCrisis ? '1 conflict — priority-based allocation applied' : 'No conflicts — full allocation' },
+    { agent:'PlannerAgent', step:'TOOL_CALL', data:'allocate_resources(required)' },
+    { agent:'PlannerAgent', step:'TOOL_RESULT', data:`Allocated: ${JSON.stringify(plan.allocated)}` },
+    { agent:'PlannerAgent', step:'TOOL_CALL', data:'generate_stakeholder_messages()' },
+    { agent:'PlannerAgent', step:'TOOL_RESULT', data:'Bilingual SMS, NDMA alert, hospital notice, media release generated' },
+    { agent:'PlannerAgent', step:'DECISION', data:`Plan ${plan.responseId}: ${plan.actions.length} actions, ETA ${plan.estimatedTime}min` },
+    { agent:'ExecutorAgent', step:'OBSERVE', data:`Executing plan ${plan.responseId}` },
+    { agent:'ExecutorAgent', step:'TOOL_CALL', data:`check_escalation_history(${sc.locationKey})` },
+    { agent:'ExecutorAgent', step:'TOOL_RESULT', data:'recentIncidents=0, shouldEscalate=false, level=Standard 1122' },
+    { agent:'ExecutorAgent', step:'TOOL_CALL', data:'write_incident_log(incident_data)' },
+    { agent:'ExecutorAgent', step:'TOOL_RESULT', data:`method=in_memory_fallback, id=INC-${Date.now()}` },
+    { agent:'ExecutorAgent', step:'TOOL_CALL', data:'send_sms_alert(public_alert)' },
+    { agent:'ExecutorAgent', step:'TOOL_RESULT', data:'status=QUEUED, method=notification_queue_fallback' },
+    { agent:'ExecutorAgent', step:'TOOL_CALL', data:'simulate_traffic_reroute()' },
+    { agent:'ExecutorAgent', step:'TOOL_RESULT', data:`congestion: 96% → 28%, alternate: Margalla Road → Kashmir Highway` },
+    ...(data.social.conflicting ? [
+      { agent:'ExecutorAgent', step:'EVALUATE', data:'Conflicting hypothesis detected — field verification triggered' },
+      { agent:'ExecutorAgent', step:'ADAPT', data:'Field team confirms: Broken Water Main — updating classification' },
+      { agent:'ExecutorAgent', step:'ACTION', data:'Alert retracted. Incident reclassified. Retraction SMS sent.' },
+    ] : []),
+    { agent:'ExecutorAgent', step:'DECISION', data:'executionStatus=SUCCESS, incidentStatus=ACTIVE' },
+  ];
+}
+
+// ═══════════════════════════════════════════════
+// PIPELINE
+// ═══════════════════════════════════════════════
+async function startAnalysis() {
+  const sc = SCENARIOS[selectedScenario];
+  const userText = document.getElementById('user-text').value;
+  const data = MOCK_DATA[sc.locationKey] || MOCK_DATA.default;
+
+  // Show loading
+  document.getElementById('detection-content').innerHTML = `
+    <div class="loading-screen">
+      <div class="spinner" style="border-top-color:var(--blue)"></div>
+      <div class="loading-title">DETECTING CRISIS</div>
+      <div class="loading-phase">AGENT 1 OF 4</div>
+      <div class="progress-wrap"><div class="progress-bar" id="prog1"></div></div>
+      <div class="logs-box" id="logs1"></div>
+    </div>`;
+  showScreen('detection');
+
+  const addLog = (id, msg, cls='') => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML += `<div class="log-line ${cls}">${new Date().toLocaleTimeString()}  ${msg}</div>`;
+  };
+
+  // Simulate detection
+  const prog1 = document.getElementById('prog1');
+  await delay(400); addLog('logs1', '[DetectorAgent] OBSERVE: Signal ingestion started'); prog1.style.width='20%';
+  await delay(500); addLog('logs1', '[DetectorAgent] TOOL_CALL: get_satellite_data()'); prog1.style.width='40%';
+  await delay(400); addLog('logs1', `[DetectorAgent] TOOL_RESULT: NDWI=${data.satellite.ndwi}, score=${data.satellite.score}`, 'log-ok'); prog1.style.width='55%';
+  await delay(400); addLog('logs1', `[DetectorAgent] TOOL_RESULT: rainfall=${data.weather.rainfall_mm ?? 'N/A'}mm`, 'log-ok'); prog1.style.width='70%';
+  await delay(400); addLog('logs1', `[DetectorAgent] TOOL_RESULT: social score=${data.social.score}, conflicting=${data.social.conflicting}`, data.social.conflicting ? 'log-warn' : 'log-ok'); prog1.style.width='85%';
+  await delay(500); addLog('logs1', '[DetectorAgent] REASONING: Gemini classifying crisis...'); prog1.style.width='95%';
+  await delay(600); addLog('logs1', '[DetectorAgent] DECISION: Urban Flooding detected ✓', 'log-ok'); prog1.style.width='100%';
+
+  // Compute
+  const fusion = computeFusion(sc, data);
+  const plan = buildPlan(sc, fusion);
+  const impact = simulateImpact(fusion, plan);
+  const trace = buildTrace(sc, data, fusion, plan);
+  pipelineData = { sc, data, fusion, plan, impact, trace };
+
+  // Change to analyst
+  document.querySelector('.loading-title').textContent = 'ANALYZING SIGNALS';
+  document.querySelector('.loading-phase').textContent = 'AGENT 2 OF 4';
+  await delay(300); addLog('logs1', '[AnalystAgent] TOOL_CALL: compute_confidence_fusion()');
+  await delay(400); addLog('logs1', `[AnalystAgent] TOOL_RESULT: fusedScore=${fusion.fusedScore}/100, ${fusion.severityLabel}`, 'log-ok');
+  await delay(300); addLog('logs1', `[AnalystAgent] DECISION: ${fusion.severityLabel} severity confirmed ✓`, 'log-ok');
+  await delay(300);
+
+  renderDetection();
+}
+
+function renderDetection() {
+  const { sc, data, fusion } = pipelineData;
+  const sevColor = fusion.severityLabel === 'HIGH' ? '#EF4444' : fusion.severityLabel === 'MEDIUM' ? '#F59E0B' : '#22C55E';
+  const confPct = Math.round(fusion.confidence * 100);
+
+  document.getElementById('detection-content').innerHTML = `
+    <div class="headline-card card" style="border-color:${sevColor}33">
+      <div class="headline-top">
+        <div class="severity-badge" style="color:${sevColor};border-color:${sevColor}44;background:${sevColor}11">
+          <div class="severity-dot" style="background:${sevColor}"></div>
+          <span class="severity-text">${fusion.severityLabel} SEVERITY</span>
+        </div>
+        <span class="crisis-type">URBAN FLOODING</span>
+      </div>
+      <div class="location-text">📍 ${sc.locationKey.toUpperCase()} · ${sc.name}</div>
+      <div class="conf-row">
+        <span class="conf-label">CONFIDENCE</span>
+        <div class="conf-bar-wrap"><div class="conf-bar" id="conf-bar" style="background:${confPct>=70?'#22C55E':'#F59E0B'}"></div></div>
+        <span class="conf-pct">${confPct}%</span>
+      </div>
+      ${data.social.conflicting ? `<div class="warning-row"><div class="warning-text">⚠ Field verification required — conflicting hypothesis: "Broken Water Main"</div></div>` : ''}
+    </div>
+
+    <div class="section-label">SIGNAL FUSION</div>
+    <div class="card">
+      <div class="fusion-row">
+        <span class="fusion-label">FUSED SCORE</span>
+        <span class="fusion-score" style="color:${sevColor}">${fusion.fusedScore}<span class="fusion-max">/100</span></span>
+      </div>
+      <div class="divider"></div>
+      ${Object.entries(fusion.components).map(([k,v]) => `
+        <div class="component-row">
+          <span class="component-label">${k.toUpperCase()}</span>
+          <div class="component-bar-wrap"><div class="component-bar comp-bar-anim" data-w="${v}"></div></div>
+          <span class="component-score">${v}</span>
+          <span class="level-pill" style="color:${v>=70?'#EF4444':'#F59E0B'};background:${v>=70?'#EF444420':'#F59E0B20'};border-color:${v>=70?'#EF444440':'#F59E0B40'}">${v>=70?'HIGH':'MED'}</span>
+        </div>`).join('')}
+      ${fusion.conflictPenalty ? `<div class="warning-text" style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--amber)">⚡ Conflict penalty applied — confidence reduced 18%</div>` : ''}
+    </div>
+
+    <div class="section-label">IMPACT ESTIMATE</div>
+    <div class="impact-grid">
+      <div class="impact-card"><div class="impact-num">50,000</div><div class="impact-card-label">PEOPLE AFFECTED</div></div>
+      <div class="impact-card"><div class="impact-num">Rs 9.0B</div><div class="impact-card-label">ECONOMIC RISK</div></div>
+      <div class="impact-card"><div class="impact-num">8 min</div><div class="impact-card-label">TARGET RESPONSE</div></div>
+      <div class="impact-card"><div class="impact-num" style="color:${fusion.fusedScore>=70?'#EF4444':'#22C55E'};font-size:13px">${fusion.fusedScore>=70?'HIGH RISK':'CONTAINED'}</div><div class="impact-card-label">CASCADE RISK</div></div>
+    </div>
+
+    <div class="section-label">AGENT REASONING</div>
+    <div class="reasoning-card">
+      <div class="reasoning-text">Satellite NDWI delta of +${data.satellite.delta} combined with ${data.weather.rainfall_mm ?? 'unavailable'}mm rainfall and ${data.social.reports} social reports confirm active flooding event. ${data.social.conflicting ? 'Conflicting signal detected — one report suggests water main burst. Field verification triggered, public alert staged.' : 'All signals aligned — immediate response authorized.'} Fused confidence score: ${fusion.fusedScore}/100.</div>
+    </div>
+
+    <button class="btn-primary green" onclick="startSimulation()">
+      PLAN & SIMULATE RESPONSE <span>→</span>
+    </button>`;
+
+  setTimeout(() => {
+    document.getElementById('conf-bar').style.width = confPct + '%';
+    document.querySelectorAll('.comp-bar-anim').forEach(b => { b.style.width = b.dataset.w + '%'; });
+  }, 100);
+}
+
+async function startSimulation() {
+  const { sc, plan } = pipelineData;
+
+  document.getElementById('simulation-content').innerHTML = `
+    <div class="loading-screen">
+      <div class="spinner" style="border-top-color:var(--green)"></div>
+      <div class="loading-title">PLANNING RESPONSE</div>
+      <div class="loading-phase">AGENT 3 OF 4</div>
+      <div class="progress-wrap"><div class="progress-bar" id="prog2"></div></div>
+      <div class="logs-box" id="logs2"></div>
+    </div>`;
+  showScreen('simulation');
+
+  const addLog = (msg, cls='') => {
+    const el = document.getElementById('logs2');
+    if (el) el.innerHTML += `<div class="log-line ${cls}">${new Date().toLocaleTimeString()}  ${msg}</div>`;
+  };
+  const prog2 = document.getElementById('prog2');
+
+  await delay(400); addLog('[PlannerAgent] TOOL_CALL: check_resource_conflicts()'); prog2.style.width='25%';
+  await delay(500); addLog('[PlannerAgent] TOOL_RESULT: Allocation computed', 'log-ok'); prog2.style.width='50%';
+  await delay(400); addLog('[PlannerAgent] TOOL_CALL: generate_stakeholder_messages()'); prog2.style.width='70%';
+  await delay(500); addLog('[PlannerAgent] DECISION: Plan generated ✓', 'log-ok'); prog2.style.width='85%';
+  document.querySelector('.loading-title').textContent = 'EXECUTING ACTIONS';
+  document.querySelector('.loading-phase').textContent = 'AGENT 4 OF 4';
+  await delay(400); addLog('[ExecutorAgent] TOOL_CALL: write_incident_log()'); prog2.style.width='90%';
+  await delay(500); addLog('[ExecutorAgent] TOOL_CALL: send_sms_alert()'); prog2.style.width='95%';
+  await delay(400); addLog('[ExecutorAgent] TOOL_CALL: simulate_traffic_reroute()', 'log-ok'); prog2.style.width='100%';
+  await delay(300);
+
+  renderSimulation();
+}
+
+function renderSimulation() {
+  const { sc, data, plan } = pipelineData;
+  const incidentId = `INC-${Date.now()}`;
+
+  document.getElementById('simulation-content').innerHTML = `
+    <div style="margin-bottom:20px">
+      <div class="success-badge" style="margin-bottom:10px"><span class="success-badge-text">${plan.responseId}</span></div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:2px;margin-bottom:4px">RESPONSE EXECUTED</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">${plan.actions.length} actions · ETA ${plan.estimatedTime} min</div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="ticket-row"><span class="ticket-label">TICKET ID</span><span class="ticket-val" style="color:var(--green)">${incidentId}</span></div>
+      <div class="ticket-row"><span class="ticket-label">STORAGE</span><span class="ticket-val">IN MEMORY FALLBACK</span></div>
+      <div class="ticket-row"><span class="ticket-label">ALERTS SENT</span><span class="ticket-val">3 queued</span></div>
+      <div class="ticket-row"><span class="ticket-label">ESCALATION</span><span class="ticket-val">Standard 1122</span></div>
+    </div>
+
+    <div class="reroute-card">
+      <div class="reroute-title">🚦 TRAFFIC REROUTED</div>
+      <div class="reroute-row">
+        <span class="reroute-before">96%</span>
+        <span class="reroute-arrow">→</span>
+        <span class="reroute-after">28%</span>
+      </div>
+      <div class="reroute-route">Margalla Road → Kashmir Highway → IJP Road</div>
+    </div>
+
+    ${data.social.conflicting ? `
+    <div class="retraction-card">
+      <div class="retraction-title">⚠ CLASSIFICATION UPDATED</div>
+      <div class="retraction-text">Field team confirmed: "Broken Water Main" — public flood alert retracted. Utility provider notified.</div>
+    </div>` : ''}
+
+    <div class="section-label">SIMULATED ACTIONS</div>
+    <div id="actions-container"></div>
+
+    <div class="alert-card" id="alert-card" style="display:none">
+      <div class="alert-title">📢 PUBLIC ALERT SENT</div>
+      <div class="alert-msg">${plan.publicAlert}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:rgba(245,158,11,0.6);margin-bottom:10px">${plan.urduAlert}</div>
+      <div class="alert-channels">
+        <span class="channel-pill">SMS</span>
+        <span class="channel-pill">APP</span>
+        <span class="channel-pill">RADIO</span>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="outcome-btn" style="display:none" onclick="showOutcome()">
+      VIEW IMPACT REPORT <span>→</span>
+    </button>`;
+
+  // Animate actions one by one
+  animateActions(plan.actions);
+}
+
+async function animateActions(actions) {
+  const container = document.getElementById('actions-container');
+  for (let i = 0; i < actions.length; i++) {
+    const a = actions[i];
+    const div = document.createElement('div');
+    div.className = 'action-card';
+    div.innerHTML = `
+      <div class="action-left">
+        <div class="action-icon-box" style="background:${a.unitColor}22">${a.icon}</div>
+        <div>
+          <div class="action-text">${a.action}</div>
+          <div class="action-meta">
+            <span class="unit-pill" style="color:${a.unitColor};border-color:${a.unitColor}44;background:${a.unitColor}11">${a.unit}</span>
+            <span class="action-time">${a.time}</span>
+          </div>
+        </div>
+      </div>
+      <div class="done-tag"><span class="done-text">✓ EXEC</span></div>`;
+    container.appendChild(div);
+    await delay(50);
+    div.classList.add('visible');
+    await delay(600);
+  }
+  document.getElementById('alert-card').style.display = 'block';
+  await delay(400);
+  document.getElementById('outcome-btn').style.display = 'flex';
+}
+
+function showOutcome() {
+  renderOutcome();
+  showScreen('outcome');
+}
+
+function renderOutcome() {
+  const { sc, fusion, plan, impact, trace } = pipelineData;
+  const stepColors = { OBSERVE:'#3B82F6',TOOL_CALL:'#8B5CF6',TOOL_RESULT:'#22C55E',REASONING:'#F59E0B',DECISION:'#EC4899',FALLBACK:'#EF4444',ADAPT:'#14B8A6',EVALUATE:'#F97316',ACTION:'#84CC16' };
+
+  document.getElementById('outcome-content').innerHTML = `
+    <div class="success-header">
+      <div class="success-badge"><span class="success-badge-text">✓ PIPELINE COMPLETE</span></div>
+      <div class="success-title">MISSION<br>ACCOMPLISHED</div>
+      <div class="success-sub">${sc.name} · ${new Date().toLocaleTimeString()}</div>
+    </div>
+
+    <div class="section-label">BEFORE vs AFTER</div>
+    <div class="card">
+      <div class="metric-row"><span class="metric-label">CONGESTION</span><div class="metric-vals"><span class="metric-before">${impact.before.congestion}</span><span class="metric-arrow">→</span><span class="metric-after">${impact.after.congestion}</span></div></div>
+      <div class="metric-row"><span class="metric-label">RESPONSE TIME</span><div class="metric-vals"><span class="metric-before">18-25 min</span><span class="metric-arrow">→</span><span class="metric-after">${impact.after.responseTime}</span></div></div>
+      <div class="metric-row"><span class="metric-label">RESCUE UNITS</span><div class="metric-vals"><span class="metric-before">0</span><span class="metric-arrow">→</span><span class="metric-after">${impact.after.units} deployed</span></div></div>
+      <div class="metric-row"><span class="metric-label">ALERTS SENT</span><div class="metric-vals"><span class="metric-before">0</span><span class="metric-arrow">→</span><span class="metric-after">${impact.after.alerts.toLocaleString()}</span></div></div>
+      <div class="metric-row"><span class="metric-label">SYSTEM STATUS</span><div class="metric-vals"><span class="metric-before">IDLE</span><span class="metric-arrow">→</span><span class="metric-after">ACTIVE</span></div></div>
+    </div>
+
+    <div class="section-label">KEY METRICS</div>
+    <div class="impact-grid">
+      <div class="impact-card"><div class="impact-num" style="color:var(--green)">${impact.metrics.reduction}</div><div class="impact-card-label">CONGESTION REDUCED</div></div>
+      <div class="impact-card"><div class="impact-num" style="color:var(--green)">82%</div><div class="impact-card-label">FASTER RESPONSE</div></div>
+      <div class="impact-card"><div class="impact-num" style="color:var(--amber)">$0.008</div><div class="impact-card-label">COST/OPERATION</div></div>
+      <div class="impact-card"><div class="impact-num" style="color:var(--blue);font-size:13px">4 AGENTS</div><div class="impact-card-label">COORDINATED</div></div>
+    </div>
+
+    <div class="section-label">BASELINE COMPARISON</div>
+    <div class="comp-card">
+      <div class="comp-row">
+        <div class="comp-label-wrap"><div class="comp-dot" style="background:var(--green)"></div><span class="comp-label-text">CIRO AGENTIC</span></div>
+        <span class="comp-val">8 min · 4 signal sources fused · automated</span>
+      </div>
+      <div class="comp-row" style="border-bottom:none">
+        <div class="comp-label-wrap"><div class="comp-dot" style="background:var(--red)"></div><span class="comp-label-text">MANUAL SYSTEM</span></div>
+        <span class="comp-val">18-25 min · human operator · sequential</span>
+      </div>
+      <div class="improvement-badge"><span class="improvement-text">↑ 82% FASTER RESPONSE</span></div>
+    </div>
+
+    <div class="scale-card">
+      <div class="scale-title">📈 SCALABILITY</div>
+      <div class="scale-text">${impact.metrics.scaling}</div>
+    </div>
+
+    <div class="section-label">AGENT TRACE LOG (${trace.length} entries)</div>
+    <div class="trace-card">
+      ${trace.map(t => `
+        <div class="trace-item">
+          <span class="trace-step-pill" style="color:${stepColors[t.step]||'#555'};border-color:${stepColors[t.step]||'#555'}44;background:${stepColors[t.step]||'#555'}11">${t.step}</span>
+          <div class="trace-right">
+            <div class="trace-agent">${t.agent.toUpperCase()}</div>
+            <div class="trace-data">${t.data}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <button class="btn-secondary" onclick="showScreen('input')">← RUN ANOTHER SCENARIO</button>
+  `;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+init();
+</script>
+</body>
+</html>

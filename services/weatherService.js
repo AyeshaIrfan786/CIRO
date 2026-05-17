@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const OWM_KEY =
-  process.env.OWM_API_KEY || '409cda2ec5e0405bfb27601bfa264e1d';
+  process.env.OWM_API_KEY || 'Your-Key';
 
 // Realistic mock data for Pakistan locations when API unavailable
 const MOCK_WEATHER = {

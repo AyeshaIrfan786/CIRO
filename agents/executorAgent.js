@@ -1,5 +1,4 @@
 // executorAgent.js — Agent 3: Action Execution, Fallback & Recovery
-// ESM module (import/export) — consistent with package.json "type":"module"
  
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import config from "../config.js";
@@ -7,7 +6,7 @@ import config from "../config.js";
 const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
 const model = genAI.getGenerativeModel({ model: config.gemini.model });
  
-// In-memory incident log (fallback when Google Sheets not configured)
+
 const INCIDENT_LOG = [];
  
 export class ExecutorAgent {
@@ -163,13 +162,10 @@ export class ExecutorAgent {
     };
     this.log("TOOL_RESULT", reroute);
  
-    // 5. Escalate if repeat incident
     if (escalation.shouldEscalate) {
       this.log("ADAPT", `Repeat incident — escalating to ${escalation.escalationLevel}`);
       await this.sendSMSAlert(`CIRO ESCALATION: Repeat incident at ${crisis.location}. Escalating to ${escalation.escalationLevel}.`, escalation.escalationLevel);
     }
- 
-    // 6. Simulate field verification + potential retraction
     let correctionResult = null;
     if (crisis.conflictingHypothesis) {
       this.log("EVALUATE", "Conflicting hypothesis detected — awaiting field verification...");
@@ -186,7 +182,7 @@ export class ExecutorAgent {
       }
     }
  
-    // 7. Gemini evaluates execution
+   
     this.log("EVALUATE", "Calling Gemini to assess execution outcome...");
     const prompt = `
 You are CIRO's Executor Agent. Evaluate this execution and return ONLY valid JSON.

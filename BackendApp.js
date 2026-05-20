@@ -10,7 +10,7 @@ import { simulateImpact, formatImpactReport } from "./simulation/impactSimulator
 // Scenarios — match what detectorAgent expects
 const SCENARIOS = [
   {
-    name: "G-10 Flash Flood 🌊",
+    name: "G-10 Flash Flood ",
     description: "Urban flooding with conflicting water-main hypothesis + secondary heat crisis",
     locationKey: "g10",
     scenario: "flooding",
@@ -18,7 +18,7 @@ const SCENARIOS = [
     secondaryCrisis: { type: "heatwave", location: "I-9 Industrial Area", severity: 6, confidence: 0.78 },
   },
   {
-    name: "Faizabad Accident + Fog 🚗",
+    name: "Faizabad Accident + Fog ",
     description: "Major road accident in dense fog",
     locationKey: "faizabad",
     scenario: "accident",
@@ -52,7 +52,7 @@ async function runCIROPipeline(scenario) {
   );
   const { classification } = detectionResult;
  
-  console.log(`\n✅ DETECTED: ${classification.primaryCrisisType || "Unknown"}`);
+  console.log(`\n DETECTED: ${classification.primaryCrisisType || "Unknown"}`);
   console.log(`   Confidence: ${classification.confidence || 0}%`);
   if (classification.requiresFieldVerification) console.log(`   ⚠ Field verification required: "${classification.alternativeHypothesis}"`);
  
@@ -61,7 +61,7 @@ async function runCIROPipeline(scenario) {
   const analyst = new AnalystAgent();
  const analysisResult = await analyst.analyze(detectionResult, detectionResult.signals);
  
-  console.log(`\n✅ ANALYSIS: ${analysisResult.analysis.confirmedSeverity || "HIGH"} severity`);
+  console.log(`\n ANALYSIS: ${analysisResult.analysis.confirmedSeverity || "HIGH"} severity`);
   console.log(`   Fused score: ${analysisResult.fusion.fusedScore}/100 | Driver: ${analysisResult.fusion.primaryDriver}`);
   console.log(`   Affected: ~${(analysisResult.impact.estimatedAffectedPopulation || 0).toLocaleString()} people | ${analysisResult.impact.economicLossFormatted}`);
  
@@ -81,7 +81,7 @@ async function runCIROPipeline(scenario) {
  
   const plan = await planner.plan(crisis, scenario.secondaryCrisis || null);
  
-  console.log(`\n✅ PLAN ${plan.responseId}: ${plan.primaryActions?.length || 0} actions`);
+  console.log(`\n PLAN ${plan.responseId}: ${plan.primaryActions?.length || 0} actions`);
   plan.primaryActions?.forEach((a, i) => console.log(`   ${i+1}. [${a.priority?.toUpperCase()}] ${a.action}`));
   if (scenario.secondaryCrisis) console.log(`   ↳ Resource split applied for secondary ${scenario.secondaryCrisis.type}`);
  
@@ -90,7 +90,7 @@ async function runCIROPipeline(scenario) {
   const executor = new ExecutorAgent();
   const execResult = await executor.execute(crisis, plan);
  
-  console.log(`\n✅ EXECUTED: Incident ID ${execResult.incidentId}`);
+  console.log(`\n EXECUTED: Incident ID ${execResult.incidentId}`);
   console.log(`   Storage: ${execResult.logResult.method}`);
   console.log(`   Alerts queued: ${execResult.notificationQueue.length}`);
   console.log(`   Traffic: ${execResult.reroute.congestionBefore} → ${execResult.reroute.congestionAfter}`);
@@ -106,6 +106,6 @@ async function runCIROPipeline(scenario) {
 // ── RUN ──────────────────────────────────────────────────
 const idx = parseInt(process.argv[2] || "0");
 runCIROPipeline(SCENARIOS[Math.min(idx, SCENARIOS.length - 1)]).catch(err => {
-  console.error("\n❌ Pipeline error:", err.message, err.stack);
+  console.error("\nPipeline error:", err.message, err.stack);
   process.exit(1);
 });
